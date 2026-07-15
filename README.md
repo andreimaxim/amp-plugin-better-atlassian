@@ -27,7 +27,7 @@ Edit `~/.config/amp/settings.json` and add the following values:
 
 ## Installation
 
-Either copy the `better-atlassian.ts` file into Amp plugin folder (e.g. `~/.config/amp/plugins/`) or run:
+Either copy the `better-atlassian.ts` file into Amp plugin folder (e.g. `~/.config/amp/plugins/`) and add the `using-jira` skill to `~/.config/agents/skills/` or run:
 
 ```sh
 ./install.sh
