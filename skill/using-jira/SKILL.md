@@ -1,11 +1,20 @@
 ---
 name: using-jira
-description: Queries Jira issues through the read-only Atlassian plugin. Use when requests mention Jira, tickets, issues, JQL, projects, assignees, statuses, transitions, or Jira fields.
+description: Queries Jira issues through the read-only Better Atlassian MCP server. Use when requests mention Jira, tickets, issues, JQL, projects, assignees, statuses, transitions, or Jira fields.
+mcpServers:
+  better-atlassian:
+    command: npx
+    args: ["-y", "@andreimaxim/better-atlassian-mcp"]
+    env:
+      ATLASSIAN_SITE_URL: "${ATLASSIAN_SITE_URL}"
+      ATLASSIAN_EMAIL: "${ATLASSIAN_EMAIL}"
+      ATLASSIAN_API_TOKEN: "${ATLASSIAN_API_TOKEN}"
+    includeTools: ["atlassian_get", "jira_search"]
 ---
 
 # Using Jira
 
-Use the Atlassian plugin instead of Git when the request is about Jira tickets or Jira work.
+Use the Better Atlassian MCP tools instead of Git when the request is about Jira tickets or Jira work.
 
 ## Choose the tool
 
@@ -48,4 +57,4 @@ Call `atlassian_get` with these site-relative paths:
 
 Use the response's pagination token, cursor, `startAt`, or `_links.next` according to that endpoint. Make one GET per tool call.
 
-If asked to create, edit, assign, or transition a Jira issue, explain that the plugin is read-only and cannot perform the change.
+If asked to create, edit, assign, or transition a Jira issue, explain that the MCP server is read-only and cannot perform the change.

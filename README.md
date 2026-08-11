@@ -1,51 +1,94 @@
-# Better Atlassian for Amp
+# Better Atlassian MCP
 
-An [Amp](https://ampcode.com) plugin for common interactions with Jira and Confluence.
+A focused, read-only [Model Context Protocol](https://modelcontextprotocol.io/) server for Jira and Confluence Cloud. It works with Amp, Claude Code, Codex, and other clients that support local stdio MCP servers.
 
-## How it works
+## Tools
 
-The plugin is intentionally read-only and exposes only safe Jira and Confluence actions.
+The server deliberately exposes only two tools:
 
-The plugin exposes the following custom tools:
+- `atlassian_get` performs one authenticated `GET` request to a site-relative Jira or Confluence API path.
+- `jira_search` performs an authenticated `POST` to Jira's read-only `/rest/api/3/search/jql` endpoint.
 
-* `atlassian_get`, which performs authenticated `GET` requests to any Atlassian endpoint (Jira or Confluence)
-* `jira_search`, which performs an authenticated `POST` request to the JQL endpoint
+It does not expose create, edit, assignment, transition, or deletion operations. Tool output is limited to 2,000 lines or 50 KB.
 
-## Repository layout
+## Requirements
 
-* `plugin/better-atlassian.ts` contains the Amp plugin
-* `skill/using-jira/SKILL.md` contains the accompanying Jira skill
+- Node.js 20 or newer
+- An Atlassian Cloud API token
 
-## Other agents
+Configure the process that runs your MCP client with these environment variables:
 
-This integration deliberately uses a small HTTP client and a focused skill instead of depending on an official Atlassian MCP server or CLI. That keeps the tool surface limited to read-only Jira and Confluence workflows, reduces API discovery, and makes the behavior easy for each user to customize. Official MCPs, CLIs, and API clients can still serve as canonical references when implementing the limited feature set.
+```bash
+export ATLASSIAN_SITE_URL="https://your-company.atlassian.net"
+export ATLASSIAN_EMAIL="you@example.com"
+export ATLASSIAN_API_TOKEN="your-api-token"
+```
 
-Pass this prompt to an agent harness such as Claude Code or Codex:
+`ATLASSIAN_SITE_URL` must use HTTPS. Treat `ATLASSIAN_API_TOKEN` as a secret and do not commit it to an MCP configuration file.
+
+Run the published package through an MCP client:
+
+```bash
+npx -y @andreimaxim/better-atlassian-mcp
+```
+
+It communicates over standard input and output, so running it directly appears to do nothing while it waits for an MCP client.
+
+## Amp
+
+The distributable [`using-jira` skill](skill/using-jira/SKILL.md) includes the MCP launch configuration and exposes only `atlassian_get` and `jira_search`. Install that directory as a project, personal, or workspace skill.
+
+For a project skill, copy it into the repository:
 
 ```text
-Build a native plugin for your agent harness equivalent to this Better Atlassian plugin for Amp:
-
-https://github.com/andreimaxim/amp-plugin-better-atlassian
-
-Read `plugin/better-atlassian.ts`, `skill/using-jira/SKILL.md`, and the README. Reimplement them using your harness's native plugin and skill conventions.
-
-Do not wrap or depend on an official Atlassian MCP server or CLI. Build a small HTTP client that inserts the Atlassian site URL and authentication credentials automatically, expose only the tools and operations in the Amp plugin, and port the skill describing common Jira workflows with sample payloads. Official MCPs, CLIs, and API clients may be consulted as canonical references, but they should not become runtime dependencies.
-
-The Amp implementation reads the site URL, email, and API token from `ATLASSIAN_SITE_URL`, `ATLASSIAN_EMAIL`, and `ATLASSIAN_API_TOKEN`, or from user-level settings such as `amp.atlassian.siteUrl`, with environment variables taking precedence. Translate these mechanisms into the closest secure, user-level equivalents offered by your harness.
-
-For context, Amp plugins are TypeScript modules that register tools through `amp.registerTool(...)` and read user configuration through `amp.configuration.get()`. Amp discovers installed project skills under `.agents/skills/`; this repository keeps the distributable skill source under `skill/using-jira/` for separation. The detailed Amp plugin API is documented at https://ampcode.com/manual/plugin-api.
-
-Preserve the original implementation's bounded output, read operations, JQL search, and skill guidance. Do not expose write or mutation operations. Add concise setup documentation and appropriate tests, then validate it using your harness's native plugin workflow.
+.agents/skills/using-jira/SKILL.md
 ```
 
-## Configuration
+For an orb, add the three `ATLASSIAN_*` values under personal, project, or workspace **Secrets & Env Vars**. Store the API token as a secret. Amp starts the MCP server in the orb when it discovers the skill and reveals its tools only when the skill loads.
 
-Edit `~/.config/amp/settings.json` and add the following values:
+The previous `amp.atlassian.*` plugin settings are no longer read; the portable MCP server uses environment variables in every harness.
 
-```json
-{
-  "amp.atlassian.siteUrl": "https://your-company.atlassian.net",
-  "amp.atlassian.email": "you@example.com",
-  "amp.atlassian.apiToken": "your-api-token"
-}
+## Claude Code
+
+Register the same stdio server at user scope:
+
+```bash
+claude mcp add --scope user --transport stdio better-atlassian -- \
+  npx -y @andreimaxim/better-atlassian-mcp
 ```
+
+Start Claude Code with the three `ATLASSIAN_*` variables available in its environment. For team distribution, put the equivalent server entry in the project's `.mcp.json` and keep credentials as environment-variable references.
+
+## Codex
+
+Add this entry to `~/.codex/config.toml`, or to `.codex/config.toml` in a trusted project:
+
+```toml
+[mcp_servers.better-atlassian]
+command = "npx"
+args = ["-y", "@andreimaxim/better-atlassian-mcp"]
+env_vars = [
+  "ATLASSIAN_SITE_URL",
+  "ATLASSIAN_EMAIL",
+  "ATLASSIAN_API_TOKEN",
+]
+enabled_tools = ["atlassian_get", "jira_search"]
+```
+
+The `env_vars` list forwards existing variables without placing their values in the configuration file.
+
+## Development
+
+```bash
+npm install
+npm run check
+npm pack --dry-run
+```
+
+Repository layout:
+
+- `src/atlassian.ts` contains credential handling, request validation, the Atlassian HTTP client, and bounded output formatting.
+- `src/server.ts` registers the MCP tools and their read-only annotations.
+- `src/index.ts` starts the stdio server.
+- `skill/using-jira/SKILL.md` contains the Amp skill and its MCP launch configuration.
+- `test/` contains HTTP-client and protocol-level integration tests.
