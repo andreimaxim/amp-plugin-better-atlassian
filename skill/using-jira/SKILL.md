@@ -1,6 +1,6 @@
 ---
 name: using-jira
-description: Queries and updates Jira issues through the Atlassian plugin. Use when requests mention Jira, tickets, issues, JQL, projects, assignees, statuses, transitions, or Jira fields.
+description: Queries Jira issues through the read-only Atlassian plugin. Use when requests mention Jira, tickets, issues, JQL, projects, assignees, statuses, transitions, or Jira fields.
 ---
 
 # Using Jira
@@ -11,7 +11,7 @@ Use the Atlassian plugin instead of Git when the request is about Jira tickets o
 
 - Use `jira_search` for JQL. It is the only read-only POST endpoint and returns Jira's raw search response.
 - Use `atlassian_get` for every other read. Jira Cloud v3 paths begin with `/rest/api/3/`.
-- Use `jira_apply` for all writes. Never attempt writes through `atlassian_get`.
+- Writes are not supported. Never attempt mutations through `atlassian_get` or `jira_search`.
 
 ## Search with JQL
 
@@ -48,8 +48,4 @@ Call `atlassian_get` with these site-relative paths:
 
 Use the response's pagination token, cursor, `startAt`, or `_links.next` according to that endpoint. Make one GET per tool call.
 
-## Apply changes
-
-Put all requested writes into one `jira_apply.operations` batch. Operations support `create`, `edit`, `assign`, and directly reachable `transition` actions.
-
-Use Jira field display names in `fields`. Before uncertain creates or edits, inspect field metadata with `atlassian_get`. `jira_apply` resolves display names, validates exposed allowed values, preflights the complete batch, and asks the user for confirmation before writing.
+If asked to create, edit, assign, or transition a Jira issue, explain that the plugin is read-only and cannot perform the change.
